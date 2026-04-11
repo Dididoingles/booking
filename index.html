@@ -1,0 +1,741 @@
+<!-- client.html - Complete working scheduling page -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendamento de clientes - @dicarvalho.prof</title>
+    <!-- Google Fonts: Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --brand-red: #c20000;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        .page-content {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.8s ease-in-out;
+        }
+
+        .page-content.active {
+            display: block;
+        }
+
+        .page-content.fade-in {
+            opacity: 1;
+        }
+
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(15, 15, 15, 0.9) 0%, rgba(5, 5, 5, 1) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .glass-panel.card-hover:hover {
+            border-color: rgba(194, 0, 0, 0.6);
+            box-shadow: 0 20px 60px rgba(194, 0, 0, 0.15);
+            transform: translateY(-8px);
+        }
+
+        .glass-panel.card-hover:hover .icon-box {
+            border-color: var(--brand-red);
+            background: rgba(194, 0, 0, 0.1);
+        }
+
+        .glass-panel.card-hover:hover .icon-box i {
+            color: var(--brand-red);
+            transform: scale(1.1);
+        }
+
+        .icon-box {
+            transition: all 0.4s ease;
+        }
+
+        .icon-box i {
+            transition: all 0.4s ease;
+        }
+
+        .input-field {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0;
+            padding: 12px 0;
+            width: 100%;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 300;
+            transition: border-bottom-color 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-bottom-color: var(--brand-red);
+        }
+
+        .btn-red {
+            background: var(--brand-red);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 99px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            border: 1px solid var(--brand-red);
+            cursor: pointer;
+        }
+
+        .btn-red:hover {
+            background: transparent;
+            color: var(--brand-red);
+            box-shadow: 0 0 25px rgba(194, 0, 0, 0.4);
+        }
+
+        .btn-red:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-outline {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 14px 28px;
+            border-radius: 99px;
+            font-weight: 400;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: #fff;
+        }
+
+        .calendar-day {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #666;
+            aspect-ratio: 1 / 1;
+        }
+
+        .calendar-day.available {
+            color: #fff;
+        }
+
+        .calendar-day.available:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .calendar-day.selected {
+            background: var(--brand-red);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(194, 0, 0, 0.4);
+        }
+
+        .time-slot-btn {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            text-align: left;
+            font-size: 0.8rem;
+            font-weight: 300;
+            color: #a1a1aa;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .time-slot-btn:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        .time-slot-btn.selected {
+            border-color: var(--brand-red);
+            background: rgba(194, 0, 0, 0.05);
+            color: #fff;
+        }
+
+        #toast {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            transform: translate(-50%, 20px);
+        }
+
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #222; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--brand-red); }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="fixed inset-0 z-0 pointer-events-none">
+        <div class="absolute top-0 right-0 w-full h-[600px] bg-gradient-to-b from-[#c20000]/5 to-transparent"></div>
+    </div>
+
+    <nav class="relative z-20 w-full max-w-6xl mx-auto px-6 py-8 flex justify-between items-center">
+        <div></div>
+        <button id="btn-voltar" class="hidden flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group">
+            <i data-lucide="chevron-left" class="w-4 h-4 group-hover:-translate-x-1 transition-transform"></i>
+            <span class="text-xs font-light">Voltar</span>
+        </button>
+    </nav>
+
+    <main class="relative z-10 pb-20">
+        
+        <!-- Dashboard Inicial -->
+        <section id="page-home" class="page-content active max-w-5xl mx-auto px-6 py-6">
+            <header class="mb-16">
+                <p class="text-[#c20000] text-[10px] tracking-[0.5em] uppercase mb-4 font-semibold">Exclusivo para alunos</p>
+                <h1 class="text-4xl md:text-5xl font-normal text-white leading-tight">O que vamos fazer hoje?</h1>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div onclick="navigateTo('page-schedule', 'aula-extra')" class="glass-panel card-hover p-10 rounded-3xl cursor-pointer group flex flex-col justify-between min-h-[280px]">
+                    <div class="icon-box w-12 h-12 flex items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800">
+                        <i data-lucide="calendar" class="w-5 h-5 text-zinc-500"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-medium mb-3">Agendar uma aula extra</h3>
+                        <p class="text-zinc-500 text-xs font-light">Reposição ou reforço com sua equipe.</p>
+                    </div>
+                </div>
+
+                <div onclick="navigateTo('page-schedule', 'conversa')" class="glass-panel card-hover p-10 rounded-3xl cursor-pointer group flex flex-col justify-between min-h-[280px]">
+                    <div class="icon-box w-12 h-12 flex items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800">
+                        <i data-lucide="message-square" class="w-5 h-5 text-zinc-500"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-medium mb-3">Agendar uma conversa informal</h3>
+                        <p class="text-zinc-500 text-xs font-light">Planejamento gratuito com a Teacher Di.</p>
+                    </div>
+                </div>
+
+                <div onclick="navigateTo('page-schedule', 'trocar-horario')" class="glass-panel card-hover p-10 rounded-3xl cursor-pointer group flex flex-col justify-between min-h-[280px]">
+                    <div class="icon-box w-12 h-12 flex items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800">
+                        <i data-lucide="refresh-ccw" class="w-5 h-5 text-zinc-500"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-medium mb-3">Trocar meu horário</h3>
+                        <p class="text-zinc-500 text-xs font-light">Ajuste permanente de sua grade.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Página de Agendamento -->
+        <section id="page-schedule" class="page-content max-w-6xl mx-auto px-6 py-6">
+            <div class="mb-12">
+                <h1 id="schedule-title" class="text-3xl font-normal text-white mb-2">Título</h1>
+                <p id="schedule-subtitle" class="text-zinc-500 text-sm font-light">Subtítulo</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                <div class="glass-panel p-10 rounded-[2.5rem] space-y-10">
+                    <h4 class="text-[10px] text-zinc-600 tracking-[0.3em] uppercase font-semibold">Suas informações</h4>
+                    <div class="space-y-6">
+                        <div class="space-y-1">
+                            <label class="text-[10px] text-zinc-500 uppercase ml-0.5">Seu nome</label>
+                            <input type="text" id="input-nome" class="input-field" placeholder="Como podemos te chamar?">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] text-zinc-500 uppercase ml-0.5">Whatsapp</label>
+                            <input type="text" id="input-whatsapp" class="input-field" placeholder="(00) 0 0000-0000">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] text-zinc-500 uppercase ml-0.5">Instagram (Opcional)</label>
+                            <input type="text" id="input-instagram" class="input-field" placeholder="@seu_perfil">
+                        </div>
+                        <div id="cupom-container" class="space-y-1 relative hidden">
+                            <label class="text-[10px] text-zinc-500 uppercase ml-0.5">Cupom de desconto</label>
+                            <input type="text" id="input-cupom" class="input-field uppercase" placeholder="Insira seu código">
+                            <div onmouseenter="showEasterEgg()" class="absolute right-0 bottom-3 cursor-help text-zinc-700 hover:text-[#c20000] p-2 transition-colors">
+                                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-[2.5rem] p-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                        <div>
+                            <div class="flex justify-between items-center mb-6 px-1">
+                                <span id="current-month-year" class="text-xs font-medium text-white uppercase tracking-widest"></span>
+                                <div class="flex gap-4 text-zinc-500">
+                                    <i data-lucide="chevron-left" id="prev-month" class="w-4 h-4 cursor-pointer hover:text-white transition-colors"></i>
+                                    <i data-lucide="chevron-right" id="next-month" class="w-4 h-4 cursor-pointer hover:text-white transition-colors"></i>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-7 gap-1 mb-2">
+                                <div class="text-center text-[9px] text-zinc-700 font-bold py-2">D</div>
+                                <div class="text-center text-[9px] text-zinc-700 font-bold py-2">S</div>
+                                <div class="text-center text-[9px] text-zinc-700 font-bold py-2">T</div>
+                                <div class="text-center text-[9px] text-zinc-700 font-bold py-2">Q</div>
+                                <div class="text-center text-[9px] text-zinc-700 font-bold py-2">Q</div>
+                                <div class="text-center text-[9px] text-zinc-700 font-bold py-2">S</div>
+                                <div class="text-center text-[9px] text-zinc-700 font-bold py-2">S</div>
+                            </div>
+                            <div id="calendar-days" class="grid grid-cols-7 gap-1"></div>
+                        </div>
+
+                        <div class="flex flex-col border-t md:border-t-0 md:border-l border-zinc-800/50 pt-8 md:pt-0 md:pl-8 justify-between">
+                            <div>
+                                <span class="text-[10px] text-zinc-500 font-medium uppercase tracking-widest mb-6 px-1 block">Horários livres</span>
+                                <div id="time-slots" class="space-y-2 max-h-[250px] overflow-y-auto pr-2 mb-6">
+                                    <div class="flex flex-col items-center justify-center h-full py-10 opacity-20">
+                                        <i data-lucide="calendar" class="mb-2"></i>
+                                        <p class="text-[10px] italic">Selecione uma data</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button id="btn-submit-booking" disabled onclick="handleMainAction()" class="btn-red w-full flex items-center justify-center gap-2">
+                                <span>Escolher horário</span>
+                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="relative z-10 max-w-5xl mx-auto px-6 pb-12">
+        <div class="flex flex-wrap justify-center md:justify-start gap-8 opacity-40 hover:opacity-100 transition-opacity duration-500">
+            <div class="flex items-center gap-2">
+                <div class="w-1.5 h-1.5 rounded-full bg-zinc-500"></div>
+                <span class="text-[10px] uppercase tracking-widest font-light">Aulas Extras</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-1.5 h-1.5 rounded-full bg-zinc-500"></div>
+                <span class="text-[10px] uppercase tracking-widest font-light">Conversas Informais</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-1.5 h-1.5 rounded-full bg-zinc-500"></div>
+                <span class="text-[10px] uppercase tracking-widest font-light">Troca de Horário</span>
+            </div>
+        </div>
+    </footer>
+
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="glass-panel border-[#c20000] p-10 rounded-[3rem] max-w-md text-center">
+            <div class="w-16 h-16 bg-[#c20000]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i data-lucide="alert-triangle" class="w-8 h-8 text-[#c20000]"></i>
+            </div>
+            <h3 class="text-xl font-normal text-white mb-4">Confirmar alteração?</h3>
+            <p class="text-zinc-500 text-xs font-light leading-relaxed mb-8">
+                Esta mudança é permanente e vai deixar o seu horário antigo livre para outra pessoa assim que o professor confirmar o horário novo.
+            </p>
+            <div class="flex flex-col gap-3">
+                <button onclick="handleConfirmationResult(true)" class="btn-red w-full">Sim, confirmar troca</button>
+                <button onclick="handleConfirmationResult(false)" class="btn-outline w-full">Não, quero escolher de novo</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="easter-egg-modal" class="modal-overlay">
+        <div class="glass-panel border-[#c20000] p-12 rounded-[3rem] max-w-sm text-center">
+            <i data-lucide="sparkles" class="w-8 h-8 text-[#c20000] mx-auto mb-6"></i>
+            <h3 class="text-2xl font-normal text-white mb-4">Você achou um easter egg!</h3>
+            <p class="text-zinc-500 text-xs font-light leading-relaxed mb-8">
+                Parabéns, digite <span class="text-white font-medium border-b border-[#c20000]">EGG</span> na caixinha de cupom e ganhe 20% Off no seu primeiro mês.
+            </p>
+            <button onclick="hideEasterEgg()" class="btn-red w-full">Ativar desconto</button>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[110] bg-zinc-900 border border-[#c20000]/50 px-6 py-4 rounded-2xl flex items-center gap-4 shadow-2xl backdrop-blur-md">
+        <i data-lucide="check-circle-2" class="w-5 h-5 text-[#c20000]"></i>
+        <span id="toast-message" class="text-xs font-light tracking-wide text-white">Mensagem</span>
+        <button onclick="hideToast()" class="text-zinc-600 hover:text-white transition-colors">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Configuration
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzBNXK62kqT54N6cdDTGBQvM4voOamJAVA2xNVu2XpM9E1AFCDx-TrHy7SyDeqDrLny/exec';
+        
+        let currentType = '';
+        let selectedTime = null;
+        let selectedDate = null;
+        let selectedDateObj = null;
+        let currentMonth = new Date();
+        let availableSlots = {};
+        let availableDates = new Set();
+
+        window.onload = () => {
+            const home = document.getElementById('page-home');
+            home.classList.add('fade-in');
+            loadAvailableSlots();
+            renderCalendar();
+            
+            document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
+            document.getElementById('next-month').addEventListener('click', () => changeMonth(1));
+        };
+
+        async function loadAvailableSlots() {
+            try {
+                const response = await fetch(`${SCRIPT_URL}?action=getAvailableSlots`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    availableSlots = data.slots;
+                    availableDates = new Set(Object.keys(availableSlots));
+                    renderCalendar();
+                }
+            } catch (error) {
+                console.error('Error loading slots:', error);
+            }
+        }
+
+        function renderCalendar() {
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth();
+            
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDayOfWeek = firstDay.getDay();
+            
+            const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            document.getElementById('current-month-year').innerText = `${monthNames[month]} ${year}`;
+            
+            const calendarDiv = document.getElementById('calendar-days');
+            calendarDiv.innerHTML = '';
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            for (let i = 0; i < startDayOfWeek; i++) {
+                const emptyDiv = document.createElement('div');
+                calendarDiv.appendChild(emptyDiv);
+            }
+            
+            for (let day = 1; day <= lastDay.getDate(); day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const isAvailable = availableDates.has(dateStr);
+                const isPast = new Date(year, month, day) < today;
+                
+                const dayBtn = document.createElement('button');
+                dayBtn.className = `calendar-day ${isAvailable && !isPast ? 'available' : ''}`;
+                if (isPast) dayBtn.style.opacity = '0.3';
+                dayBtn.innerText = day;
+                
+                if (isAvailable && !isPast) {
+                    dayBtn.onclick = () => selectDate(dayBtn, day, year, month);
+                }
+                
+                calendarDiv.appendChild(dayBtn);
+            }
+            
+            lucide.createIcons();
+        }
+
+        function changeMonth(delta) {
+            currentMonth.setMonth(currentMonth.getMonth() + delta);
+            renderCalendar();
+            
+            if (selectedDate) {
+                selectedDate = null;
+                selectedTime = null;
+                selectedDateObj = null;
+                updateSubmitButton();
+                document.getElementById('time-slots').innerHTML = `<div class="flex flex-col items-center justify-center h-full py-10 opacity-20"><i data-lucide="calendar" class="mb-2"></i><p class="text-[10px] italic">Selecione uma data</p></div>`;
+                lucide.createIcons();
+            }
+        }
+
+        function selectDate(btn, day, year, month) {
+            selectedDate = day;
+            selectedDateObj = new Date(year, month, day);
+            selectedTime = null;
+            updateSubmitButton();
+
+            document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('selected'));
+            btn.classList.add('selected');
+
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const times = availableSlots[dateStr] || [];
+            
+            if (times.length === 0) {
+                document.getElementById('time-slots').innerHTML = `<div class="flex flex-col items-center justify-center h-full py-10 opacity-50"><i data-lucide="clock" class="mb-2"></i><p class="text-[10px] italic">Nenhum horário disponível nesta data</p></div>`;
+            } else {
+                let html = '';
+                times.forEach(t => {
+                    html += `
+                        <button onclick="selectTimeSlot(this, '${t}')" class="time-slot-btn group">
+                            ${t}
+                            <i data-lucide="check" class="w-3 h-3 opacity-0 group-[.selected]:opacity-100 transition-opacity text-[#c20000]"></i>
+                        </button>
+                    `;
+                });
+                document.getElementById('time-slots').innerHTML = html;
+            }
+            lucide.createIcons();
+        }
+
+        function selectTimeSlot(btn, time) {
+            selectedTime = time;
+            document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            updateSubmitButton();
+        }
+
+        function updateSubmitButton() {
+            const btn = document.getElementById('btn-submit-booking');
+            btn.disabled = !(selectedDate && selectedTime);
+        }
+
+        function navigateTo(pageId, type = '') {
+            currentType = type;
+            selectedTime = null;
+            selectedDate = null;
+            selectedDateObj = null;
+            updateSubmitButton();
+
+            const allPages = document.querySelectorAll('.page-content');
+            const target = document.getElementById(pageId);
+            const btnVoltar = document.getElementById('btn-voltar');
+            const cupom = document.getElementById('cupom-container');
+
+            allPages.forEach(p => p.classList.remove('fade-in'));
+
+            setTimeout(() => {
+                allPages.forEach(p => p.classList.remove('active'));
+                target.classList.add('active');
+                
+                if(pageId === 'page-home') {
+                    btnVoltar.classList.add('hidden');
+                } else {
+                    btnVoltar.classList.remove('hidden');
+                    updateScheduleInfo(type);
+                    cupom.classList.toggle('hidden', type !== 'conversa');
+                    
+                    document.getElementById('input-nome').value = '';
+                    document.getElementById('input-whatsapp').value = '';
+                    document.getElementById('input-instagram').value = '';
+                    if(document.getElementById('input-cupom')) document.getElementById('input-cupom').value = '';
+                    
+                    loadAvailableSlots();
+                    currentMonth = new Date();
+                    renderCalendar();
+                }
+
+                setTimeout(() => {
+                    target.classList.add('fade-in');
+                }, 50);
+
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 300);
+        }
+
+        function updateScheduleInfo(type) {
+            const title = document.getElementById('schedule-title');
+            const sub = document.getElementById('schedule-subtitle');
+            const info = {
+                'aula-extra': { t: 'Agendar uma aula extra', s: 'Solicite uma reposição de aula com seu professor.' },
+                'conversa': { t: 'Agendar uma conversa informal', s: 'Defina seu perfil de aprendizagem e plano de estudos.' },
+                'trocar-horario': { t: 'Trocar meu horário', s: 'Selecione um novo horário fixo em sua agenda.' }
+            };
+            title.innerText = info[type].t;
+            sub.innerText = info[type].s;
+            lucide.createIcons();
+        }
+
+        function validateForm() {
+            const nome = document.getElementById('input-nome').value.trim();
+            const whatsapp = document.getElementById('input-whatsapp').value.trim();
+            
+            if(!nome) {
+                showToast('Por favor, informe seu nome para continuar.');
+                return false;
+            }
+            if(!whatsapp) {
+                showToast('Por favor, informe seu WhatsApp para continuar.');
+                return false;
+            }
+            if(!selectedDate || !selectedTime) {
+                showToast('Por favor, selecione uma data e horário.');
+                return false;
+            }
+            return true;
+        }
+
+        async function handleMainAction() {
+            if(!validateForm()) return;
+            
+            const nome = document.getElementById('input-nome').value.trim();
+            const whatsapp = document.getElementById('input-whatsapp').value.trim();
+            const instagram = document.getElementById('input-instagram').value.trim();
+            const cupom = document.getElementById('input-cupom') ? document.getElementById('input-cupom').value.trim() : '';
+            
+            const dateFormatted = `${selectedDateObj.getFullYear()}-${String(selectedDateObj.getMonth() + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`;
+            
+            if(currentType === 'trocar-horario') {
+                showConfirmModal();
+                window.pendingBooking = { nome, whatsapp, instagram, cupom, date: dateFormatted, time: selectedTime };
+            } else {
+                await submitBooking(nome, whatsapp, instagram, cupom, dateFormatted, selectedTime);
+            }
+        }
+
+        async function submitBooking(nome, whatsapp, instagram, cupom, date, time) {
+            const btn = document.getElementById('btn-submit-booking');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span><span>Enviando...</span>';
+            
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'createBooking',
+                        type: currentType,
+                        nome: nome,
+                        whatsapp: whatsapp,
+                        instagram: instagram,
+                        cupom: cupom,
+                        date: date,
+                        time: time
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if(data.success) {
+                    if(currentType === 'conversa') {
+                        showToast('Estamos entrando em contato com a teacher Di. Você receberá uma mensagem no WhatsApp confirmando o compromisso assim que estiver tudo pronto.');
+                    } else if(currentType === 'aula-extra') {
+                        showToast('Solicitação enviada! O professor entrará em contato via WhatsApp em breve.');
+                    } else {
+                        showToast('Solicitação de troca enviada com sucesso para o professor.');
+                    }
+                    await loadAvailableSlots();
+                } else {
+                    showToast(data.error || 'Erro ao enviar solicitação. Tente novamente.');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Erro de conexão. Tente novamente.');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        function showConfirmModal() {
+            document.getElementById('confirm-modal').style.display = 'flex';
+            lucide.createIcons();
+        }
+
+        async function handleConfirmationResult(confirmed) {
+            document.getElementById('confirm-modal').style.display = 'none';
+            
+            if(confirmed && window.pendingBooking) {
+                await submitBooking(
+                    window.pendingBooking.nome,
+                    window.pendingBooking.whatsapp,
+                    window.pendingBooking.instagram,
+                    window.pendingBooking.cupom,
+                    window.pendingBooking.date,
+                    window.pendingBooking.time
+                );
+                window.pendingBooking = null;
+            } else if(!confirmed) {
+                showToast('Ok, escolha um novo horário.');
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => {
+                hideToast();
+                if(!msg.includes('nome') && !msg.includes('WhatsApp') && !msg.includes('selecione')) {
+                    navigateTo('page-home');
+                }
+            }, 5000);
+        }
+
+        function hideToast() {
+            document.getElementById('toast').classList.remove('show');
+        }
+
+        function showEasterEgg() {
+            document.getElementById('easter-egg-modal').style.display = 'flex';
+            lucide.createIcons();
+        }
+
+        function hideEasterEgg() {
+            document.getElementById('easter-egg-modal').style.display = 'none';
+        }
+
+        document.getElementById('btn-voltar').onclick = () => navigateTo('page-home');
+    </script>
+</body>
+</html>
