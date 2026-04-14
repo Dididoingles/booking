@@ -194,19 +194,25 @@
     <script>
         lucide.createIcons();
         
-        // Configuration
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxmEGNHyiyl8fWPW9_j6M_5KcNldY3FIdF8Unr6HmTTXEbMjcUfQuQFGPij1_gblqgC/exec';
-      
-        
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycb_REW4e3t0lEOQQMPeffjx4P3YNZ5_heQFE2DIIIhOqrLGBekGC2zhdKqJPWxmTBgy/exec';
+
+        async function callAPI(action, data = {}) {
+            const response = await fetch(WEB_APP_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                body: JSON.stringify({ action, ...data })
+            });
+            return await response.json();
+        }
+
         let selectedType = '';
         let selectedTeacherId = null;
         let selectedTime = null;
         let selectedDateKey = null;
-        let availableSlotsData = {}; 
+        let availableSlotsData = {};
         let currentCalendarDate = new Date();
         const weekDaysMap = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
-        // Função auxiliar para obter a data/hora atual no fuso da escola
         function getSchoolNow() {
             const now = new Date();
             const brasiliaTime = now.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"});
@@ -218,27 +224,29 @@
             fetchTeachers();
         };
 
-        function fetchTeachers() {
-            google.script.run.withSuccessHandler(teachers => {
+        async function fetchTeachers() {
+            try {
+                const teachers = await callAPI('getProfessores');
                 const select = document.getElementById('input-prof');
                 teachers.forEach(t => {
                     const option = document.createElement('option');
                     option.value = t.id; option.text = t.nome;
                     select.add(option);
                 });
-            }).getProfessores();
+            } catch (e) { console.error(e); }
         }
 
-        function onTeacherChange() {
+        async function onTeacherChange() {
             selectedTeacherId = document.getElementById('input-prof').value;
             const container = document.getElementById('time-slots');
             container.innerHTML = `<div class="flex items-center justify-center h-full py-10"><div class="loading-spinner"></div></div>`;
             
-            google.script.run.withSuccessHandler(slots => {
+            try {
+                const slots = await callAPI('getSlots', { profId: selectedTeacherId });
                 availableSlotsData = slots;
                 renderCalendar();
                 resetTimeSlotsView();
-            }).getSlots(selectedTeacherId);
+            } catch (e) { console.error(e); }
         }
 
         function navigateTo(pageId, type = '') {
@@ -299,10 +307,8 @@
             const grid = document.getElementById('calendar-grid-days');
             const monthYearLabel = document.getElementById('calendar-month-year');
             grid.innerHTML = '';
-            
             const schoolNow = getSchoolNow();
             const today = new Date(schoolNow.getFullYear(), schoolNow.getMonth(), schoolNow.getDate());
-
             const year = currentCalendarDate.getFullYear();
             const month = currentCalendarDate.getMonth();
             const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -310,23 +316,17 @@
 
             const firstDayOfMonth = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
-
             for (let i = 0; i < firstDayOfMonth; i++) grid.appendChild(document.createElement('div'));
-
             for (let day = 1; day <= daysInMonth; day++) {
                 const date = new Date(year, month, day);
                 const dayName = weekDaysMap[date.getDay()];
                 const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                
                 const isPastDate = date < today;
                 const hasSlots = availableSlotsData[dayName] && availableSlotsData[dayName].length > 0;
-                
                 const dayEl = document.createElement('div');
                 dayEl.className = 'flex justify-center py-1';
                 const isSelected = dateKey === selectedDateKey;
-                
                 let classes = `calendar-day ${isSelected ? 'selected' : ''} ${(isPastDate || !hasSlots) ? 'disabled' : ''}`;
-
                 dayEl.innerHTML = `<button onclick="selectDate(this, '${dateKey}', '${dayName}')" class="${classes}" ${(isPastDate || !hasSlots) ? 'disabled' : ''}>${day}</button>`;
                 grid.appendChild(dayEl);
             }
@@ -344,14 +344,11 @@
         function renderTimeSlots(dayName) {
             const container = document.getElementById('time-slots');
             let times = availableSlotsData[dayName] || [];
-            
             const schoolNow = getSchoolNow();
             const todayKey = `${schoolNow.getFullYear()}-${String(schoolNow.getMonth() + 1).padStart(2, '0')}-${String(schoolNow.getDate()).padStart(2, '0')}`;
-
             if (selectedDateKey === todayKey) {
                 const currentHour = schoolNow.getHours();
                 const currentMin = schoolNow.getMinutes();
-                
                 times = times.filter(t => {
                     const [h, m] = t.split(':').map(Number);
                     if (h > currentHour) return true;
@@ -359,12 +356,10 @@
                     return false;
                 });
             }
-
             if (times.length === 0) {
                 container.innerHTML = `<div class="flex flex-col items-center justify-center h-full py-10 opacity-20"><p class="text-[10px] italic">Sem horários disponíveis para este momento.</p></div>`;
                 return;
             }
-
             container.innerHTML = times.map(t => `
                 <button onclick="selectTimeSlot(this, '${t}')" class="time-slot-btn group">
                     ${t}
@@ -388,7 +383,8 @@
 
         async function handleMainAction() {
             if(!document.getElementById('input-nome').value.trim() || !document.getElementById('input-whatsapp').value.trim()) {
-                showToast('Informe seu nome e Whatsapp.', true); return;
+                showToast('Informe seu nome e Whatsapp.', true);
+                return;
             }
             if(selectedType === 'trocar-horario') document.getElementById('confirm-modal').style.display = 'flex';
             else performSubmit();
@@ -399,7 +395,7 @@
             if(confirmed) performSubmit();
         }
 
-        function performSubmit() {
+        async function performSubmit() {
             const btn = document.getElementById('btn-submit-booking');
             const originalHtml = btn.innerHTML;
             btn.disabled = true;
@@ -417,15 +413,19 @@
                 cupom: document.getElementById('input-cupom')?.value.toUpperCase() || ''
             };
 
-            google.script.run.withSuccessHandler(res => {
+            try {
+                const res = await callAPI('submitBooking', { payload });
                 if(res.success) {
                     showToast("Solicitação enviada com sucesso!");
                     setTimeout(() => navigateTo('page-home'), 2000);
                 } else {
                     showToast("Erro ao enviar. Tente novamente.", true);
                 }
+            } catch (e) {
+                showToast("Erro de conexão com o servidor.", true);
+            } finally {
                 btn.disabled = false; btn.innerHTML = originalHtml; lucide.createIcons();
-            }).submitBooking(payload);
+            }
         }
 
         function showToast(msg, isError = false) {
